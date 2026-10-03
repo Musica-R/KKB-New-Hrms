@@ -10,11 +10,11 @@ import {
   FiSearch,
 } from 'react-icons/fi';
 
-const COMPANY_API = 'https://store.mpdatahub.com/api/list-company';
-const BRANCH_API = 'https://store.mpdatahub.com/api/get-branch-for-company?company_id=';
+const COMPANY_API = 'https://storekkb.mpdatahub.com/api/list-company';
+const BRANCH_API = 'https://storekkb.mpdatahub.com/api/get-branch-for-company?company_id=';
 
-const LEAVE_LIST_BASE = 'https://store.mpdatahub.com/api/leave-list-branch';
-const UPDATE_STATUS_API = 'https://store.mpdatahub.com/api/update-Leave-status';
+const LEAVE_LIST_BASE = 'https://storekkb.mpdatahub.com/api/leave-list-branch';
+const UPDATE_STATUS_API = 'https://storekkb.mpdatahub.com/api/update-Leave-status';
 
 const STATUS_CONFIG = {
   approved: {

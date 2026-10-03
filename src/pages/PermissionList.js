@@ -4,11 +4,11 @@ import { FiClock, FiCheckCircle, FiXCircle, FiRefreshCw, FiAlertCircle, FiSearch
 import Lottie from "lottie-react";
 import animationData from "../LottieFiles/Allow Permission.json";
 
-const COMPANY_API = 'https://store.mpdatahub.com/api/list-company';
-const BRANCH_API = 'https://store.mpdatahub.com/api/get-branch-for-company?company_id=';
+const COMPANY_API = 'https://storekkb.mpdatahub.com/api/list-company';
+const BRANCH_API = 'https://storekkb.mpdatahub.com/api/get-branch-for-company?company_id=';
 
-const PERMISSION_LIST_BASE = 'https://store.mpdatahub.com/api/permission-list-by-branch';
-const APPROVE_PERMISSION_API = 'https://store.mpdatahub.com/api/approve-permission';
+const PERMISSION_LIST_BASE = 'https://storekkb.mpdatahub.com/api/permission-list-by-branch';
+const APPROVE_PERMISSION_API = 'https://storekkb.mpdatahub.com/api/approve-permission';
 
 const STATUS_CONFIG = {
   approved: {

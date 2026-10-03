@@ -18,7 +18,7 @@ const DashboardHome = () => {
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
-                const response = await fetch('https://store.mpdatahub.com/api/dashboard-list');
+                const response = await fetch('https://storekkb.mpdatahub.com/api/dashboard-list');
                 const result = await response.json();
                 if (result.success) {
                     setDashboardData(result.data);
@@ -83,7 +83,7 @@ const DashboardHome = () => {
     const getImageUrl = (imagePath) => {
         if (!imagePath) return null;
         if (imagePath.startsWith('http')) return imagePath;
-        return `https://store.mpdatahub.com/images/${imagePath}`;
+        return `https://storekkb.mpdatahub.com/images/${imagePath}`;
     };
 
     if (loading) {

@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { FaGreaterThan } from 'react-icons/fa6';
 import { CiEdit } from 'react-icons/ci';
 
-const API_BASE = 'https://store.mpdatahub.com/api';
+const API_BASE = 'https://storekkb.mpdatahub.com/api';
 
 const CompanyDetails = () => {
   const [formData, setFormData] = useState({
@@ -96,7 +96,7 @@ const CompanyDetails = () => {
 
       try {
         const response = await fetch(
-          'https://store.mpdatahub.com/api/list-company'
+          'https://storekkb.mpdatahub.com/api/list-company'
         );
         const result = await response.json();
         if (result.success) {
@@ -119,7 +119,7 @@ const CompanyDetails = () => {
     const fetchBranch = async () => {
       try {
         const response = await fetch(
-          `https://store.mpdatahub.com/api/list-Branch-id/${companyId}`
+          `https://storekkb.mpdatahub.com/api/list-Branch-id/${companyId}`
         );
         const result = await response.json();
         if (result.success) {
@@ -191,7 +191,7 @@ const CompanyDetails = () => {
 
     try {
       const response = await fetch(
-        'https://store.mpdatahub.com/api/add-company',
+        'https://storekkb.mpdatahub.com/api/add-company',
         {
           method: 'POST',
           body: submitData,
@@ -237,7 +237,7 @@ const CompanyDetails = () => {
     try {
       if (isEdit) {
         const response = await fetch(
-          'https://store.mpdatahub.com/api/update-branch',
+          'https://storekkb.mpdatahub.com/api/update-branch',
           {
             method: 'POST',
             body: submitData,
@@ -265,7 +265,7 @@ const CompanyDetails = () => {
         }
       } else {
         const response = await fetch(
-          'https://store.mpdatahub.com/api/add-branch',
+          'https://storekkb.mpdatahub.com/api/add-branch',
           {
             method: 'POST',
             body: submitData,

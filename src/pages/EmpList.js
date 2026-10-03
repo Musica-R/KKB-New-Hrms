@@ -5,20 +5,20 @@ import { FiEdit2, FiX, FiSave, FiSearch, FiPlus, FiLock, FiEye, FiEyeOff } from 
 import Lottie from "lottie-react";
 import animationData from "../LottieFiles/Employee Search.json";
 
-const COMPANY_API = "https://store.mpdatahub.com/api/list-company";
-const BRANCH_API = "https://store.mpdatahub.com/api/get-branch-for-company?company_id=";
+const COMPANY_API = "https://storekkb.mpdatahub.com/api/list-company";
+const BRANCH_API = "https://storekkb.mpdatahub.com/api/get-branch-for-company?company_id=";
 
-const UPDATE_URL = 'https://store.mpdatahub.com/api/update-profile';
-const ROLE_API = "https://store.mpdatahub.com/api/roles";
-const POSITION_API = "https://store.mpdatahub.com/api/positions";
+const UPDATE_URL = 'https://storekkb.mpdatahub.com/api/update-profile';
+const ROLE_API = "https://storekkb.mpdatahub.com/api/roles";
+const POSITION_API = "https://storekkb.mpdatahub.com/api/positions";
 
 // Branch-filtered list APIs
-const API_URL_BASE = 'https://store.mpdatahub.com/api/employee-list-by-branch?branch_id=';
-const INACTIVE_URL_BASE = 'https://store.mpdatahub.com/api/inactive-employee-list-by-branch?branch_id=';
-const INTERN_URL_BASE = 'https://store.mpdatahub.com/api/employee-list-role-by-branch?branch_id=';
-const INACTIVE_INTERN_URL_BASE = 'https://store.mpdatahub.com/api/inactive-employee-list-role-by-branch?branch_id=';
+const API_URL_BASE = 'https://storekkb.mpdatahub.com/api/employee-list-by-branch?branch_id=';
+const INACTIVE_URL_BASE = 'https://storekkb.mpdatahub.com/api/inactive-employee-list-by-branch?branch_id=';
+const INTERN_URL_BASE = 'https://storekkb.mpdatahub.com/api/employee-list-role-by-branch?branch_id=';
+const INACTIVE_INTERN_URL_BASE = 'https://storekkb.mpdatahub.com/api/inactive-employee-list-role-by-branch?branch_id=';
 
-const UPDATE_STATUS_URL = 'https://store.mpdatahub.com/api/update-Employee-Status';
+const UPDATE_STATUS_URL = 'https://storekkb.mpdatahub.com/api/update-Employee-Status';
 
 export default function EmpList() {
   const navigate = useNavigate();

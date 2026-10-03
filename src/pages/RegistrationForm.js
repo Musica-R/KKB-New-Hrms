@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FiArrowLeft } from 'react-icons/fi';
 import '../styles/RegistrationForm.css';
 
-const API_BASE = 'https://store.mpdatahub.com/api';
+const API_BASE = 'https://storekkb.mpdatahub.com/api';
 
 const RegistrationForm = () => {
   const navigate = useNavigate();

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import '../styles/AttendanceList.css';
@@ -8,16 +9,16 @@ import Lottie from "lottie-react";
 import animationData from "../LottieFiles/Completing Tasks.json";
 
 // ---------------- API ENDPOINTS ----------------
-const COMPANY_API = "https://store.mpdatahub.com/api/list-company";
-const BRANCH_API = "https://store.mpdatahub.com/api/get-branch-for-company?company_id=";
-const POSITION_API = "https://store.mpdatahub.com/api/positions";
+const COMPANY_API = "https://storekkb.mpdatahub.com/api/list-company";
+const BRANCH_API = "https://storekkb.mpdatahub.com/api/get-branch-for-company?company_id=";
+const POSITION_API = "https://storekkb.mpdatahub.com/api/positions";
 
-const ATTENDANCE_PRESENT_API = "https://store.mpdatahub.com/api/attendance-List-branch";
-const ATTENDANCE_ABSENT_API = "https://store.mpdatahub.com/api/attendance-List-absent-branch";
+const ATTENDANCE_PRESENT_API = "https://storekkb.mpdatahub.com/api/attendance-List-branch";
+const ATTENDANCE_ABSENT_API = "https://storekkb.mpdatahub.com/api/attendance-List-absent-branch";
 
-const EMPLOYEE_LIST_BY_BRANCH_API = "https://store.mpdatahub.com/api/employee-list-by-branch?branch_id=";
+const EMPLOYEE_LIST_BY_BRANCH_API = "https://storekkb.mpdatahub.com/api/employee-list-by-branch?branch_id=";
 
-const MONTHLY_SUMMARY_ADMIN_API = "https://store.mpdatahub.com/api/get-Monthly-Summary-admin";
+const MONTHLY_SUMMARY_ADMIN_API = "https://storekkb.mpdatahub.com/api/get-Monthly-Summary-admin";
 
 const EMP_PER_PAGE = 2; // employees shown per page inside the monthly report popup
 

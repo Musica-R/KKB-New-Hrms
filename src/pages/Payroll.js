@@ -5,7 +5,7 @@ import jsPDF from 'jspdf';
 import '../styles/Payroll.css';
 import logo from "../assets/logo.png";
 
-const BASE_URL = 'https://store.mpdatahub.com/api';
+const BASE_URL = 'https://storekkb.mpdatahub.com/api';
 
 const COMPANY_API = `${BASE_URL}/list-company`;
 const BRANCH_API = `${BASE_URL}/get-branch-for-company?company_id=`;

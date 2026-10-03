@@ -105,6 +105,24 @@ const AdminLayout = () => {
                         <FiCalendar className="nav-icon" /> <span>Attendance List</span>
                     </NavLink>
 
+
+                    <NavLink
+                        to="/admin/pro-list"
+                        className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}
+                        onClick={closeSidebar}
+                    >
+                        <MdOutlineNotificationsActive className="nav-icon" /> <span>Create Project</span>
+                    </NavLink>
+
+                    <NavLink
+                        to="/admin/task-list"
+                        className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}
+                        onClick={closeSidebar}
+                    >
+                        <MdOutlineNotificationsActive className="nav-icon" /> <span>Task Status Panel</span>
+                    </NavLink>
+
+
                     <NavLink
                         to="/admin/add-holiday"
                         className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}
