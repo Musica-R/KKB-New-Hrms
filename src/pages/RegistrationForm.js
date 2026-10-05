@@ -5,27 +5,45 @@ import '../styles/RegistrationForm.css';
 
 const API_BASE = 'https://storekkb.mpdatahub.com/api';
 
+// Designation options (API accepts: TL, TM)
+const DESIGNATIONS = [
+  { value: 'TL', label: 'Team Lead' },
+  { value: 'TM', label: 'Team Member' },
+];
+
+// Employee status options (API accepts: working, notice_period, relieved)
+const EMPLOYEE_STATUSES = [
+  { value: 'working', label: 'Working' },
+  { value: 'notice_period', label: 'Notice Period' },
+  { value: 'relieved', label: 'Relieved' },
+];
+
+const initialFormData = {
+  name: '',
+  empid: '',
+  email: '',
+  mobile: '',
+  password: '',
+  c_password: '',
+  company_id: '',
+  branch_id: '',
+  address: '',
+  position_id: '',
+  role_id: '',
+  designation: '',
+  employee_status: '',
+  team_id: '',
+  start_time: '',
+  end_time: '',
+  dob: '',
+  salary: '',
+  profileimg: null,
+};
+
 const RegistrationForm = () => {
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
-    name: '',
-    empid: '',
-    email: '',
-    mobile: '',
-    password: '',
-    c_password: '',
-    company_id: '',
-    branch_id: '',
-    address: '',
-    position: '',
-    role_id: '',
-    start_time: '',
-    end_time: '',
-    dob: '',
-    salary: '',
-    profileimg: null,
-  });
+  const [formData, setFormData] = useState(initialFormData);
 
   const [companies, setCompanies] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -42,6 +60,10 @@ const RegistrationForm = () => {
   // Adding/editing/deleting positions now lives on the Company Details page.
   const [positions, setPositions] = useState([]);
   const [loadingPositions, setLoadingPositions] = useState(false);
+
+  /* ================= TEAMS STATE ================= */
+  const [teams, setTeams] = useState([]);
+  const [loadingTeams, setLoadingTeams] = useState(false);
 
   /* ================= FETCH COMPANIES ================= */
 
@@ -144,6 +166,29 @@ const RegistrationForm = () => {
     fetchPositions();
   }, []);
 
+  /* ================= FETCH TEAMS ================= */
+
+  useEffect(() => {
+    const fetchTeams = async () => {
+      setLoadingTeams(true);
+
+      try {
+        const response = await fetch(`${API_BASE}/teams/team-list`);
+        const result = await response.json();
+
+        if (result.success) {
+          setTeams(result.data);
+        }
+      } catch (error) {
+        console.error('Error fetching teams:', error);
+      }
+
+      setLoadingTeams(false);
+    };
+
+    fetchTeams();
+  }, []);
+
   /* ================= HANDLE EMPLOYEE INPUT ================= */
 
   const handleChange = (e) => {
@@ -177,6 +222,7 @@ const RegistrationForm = () => {
 
     const submitData = new FormData();
 
+    // includes designation and team_id (team's id) along with the other fields
     Object.keys(formData).forEach((key) => {
       if (formData[key] !== null) {
         submitData.append(key, formData[key]);
@@ -194,24 +240,7 @@ const RegistrationForm = () => {
       if (response.ok) {
         alert(result.message || 'User registered successfully!');
 
-        setFormData({
-          name: '',
-          empid: '',
-          email: '',
-          mobile: '',
-          password: '',
-          c_password: '',
-          company_id: '',
-          branch_id: '',
-          address: '',
-          position: '',
-          role_id: '',
-          start_time: '',
-          end_time: '',
-          dob: '',
-          salary: '',
-          profileimg: null,
-        });
+        setFormData(initialFormData);
       } else {
         if (result.data) {
           let errorMessages = Object.values(result.data).flat().join('\n');
@@ -348,8 +377,8 @@ const RegistrationForm = () => {
             <label>Position</label>
 
             <select
-              name="position"
-              value={formData.position}
+              name="position_id"
+              value={formData.position_id}
               onChange={handleChange}
               required
             >
@@ -360,6 +389,71 @@ const RegistrationForm = () => {
               {selectablePositions.map((pos) => (
                 <option key={pos.id} value={pos.id}>
                   {pos.position_name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* DESIGNATION */}
+
+          <div className="form-group">
+            <label>Designation</label>
+
+            <select
+              name="designation"
+              value={formData.designation}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select Designation</option>
+
+              {DESIGNATIONS.map((d) => (
+                <option key={d.value} value={d.value}>
+                  {d.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* EMPLOYEE STATUS */}
+
+          <div className="form-group">
+            <label>Employee Status</label>
+
+            <select
+              name="employee_status"
+              value={formData.employee_status}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select Status</option>
+
+              {EMPLOYEE_STATUSES.map((st) => (
+                <option key={st.value} value={st.value}>
+                  {st.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* TEAM (sends the team's id as team_id) */}
+
+          <div className="form-group">
+            <label>Team</label>
+
+            <select
+              name="team_id"
+              value={formData.team_id}
+              onChange={handleChange}
+              required
+            >
+              <option value="">
+                {loadingTeams ? 'Loading...' : 'Select Team'}
+              </option>
+
+              {teams.map((team) => (
+                <option key={team.id} value={team.id}>
+                  {team.name}
                 </option>
               ))}
             </select>

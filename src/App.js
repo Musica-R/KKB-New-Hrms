@@ -26,6 +26,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import AccountDeletion from './pages/AccountDeletion';
 import CreateProject from './pages/Createproject';
 import TaskStatusPanel from './pages/TaskStatusPanel';
+import TeamManagement from './pages/TeamManagement';
 
 function App() {
 
@@ -63,6 +64,7 @@ function App() {
             <Route path="leave-list" element={<LeaveList />} />
             <Route path="pro-list" element={<CreateProject />} />
             <Route path="task-list" element={<TaskStatusPanel />} />
+            <Route path="team-management" element={<TeamManagement />} />
             <Route path="permission-list" element={<PermissionList />} />
             <Route path="attendance" element={<AttendanceList />} />
             <Route path="payroll-list" element={<Payroll />} />

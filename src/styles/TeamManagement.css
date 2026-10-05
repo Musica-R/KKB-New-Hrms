@@ -1,0 +1,280 @@
+.team-page {
+  padding: 30px 40px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* ===== Header ===== */
+.team-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.team-title h1 {
+  margin: 0;
+  font-size: 24px;
+  color: #0369a1;
+}
+
+.team-title p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.btn-add-team {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  background: #0ea5e9;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.btn-add-team:hover {
+  background: #0284c7;
+}
+
+/* ===== List card ===== */
+.team-card {
+  width: 100%;
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  box-sizing: border-box;
+}
+
+.team-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.team-empty {
+  text-align: center;
+  color: #64748b;
+  padding: 20px 0;
+  margin: 0;
+}
+
+.team-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  background: #f1f5f9;
+  border-radius: 8px;
+}
+
+.team-name {
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  padding: 6px 12px;
+  cursor: pointer;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 13px;
+}
+
+.btn-team-edit {
+  background: #22c55e;
+}
+
+.btn-team-delete {
+  background: #ef4444;
+}
+
+/* ===== Modal ===== */
+.team-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 1000;
+}
+
+.team-modal-box {
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.team-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.team-modal-header h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #0369a1;
+}
+
+.team-modal-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #64748b;
+  display: flex;
+}
+
+.team-modal-body {
+  padding: 20px;
+}
+
+.team-modal-body label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #334155;
+}
+
+.team-modal-body input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.team-modal-body input:focus {
+  outline: none;
+  border-color: #0ea5e9;
+}
+
+.team-modal-error {
+  background: #fee2e2;
+  color: #b91c1c;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.team-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.btn-team-cancel,
+.btn-team-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.btn-team-cancel {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.btn-team-save {
+  background: #0ea5e9;
+  color: #fff;
+}
+
+.btn-team-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ===== Tablet (1024px) ===== */
+@media (max-width: 1024px) {
+  .team-page {
+    padding: 25px 30px;
+  }
+}
+
+/* ===== Small devices (768px) ===== */
+@media (max-width: 768px) {
+  .team-page {
+    padding: 20px;
+  }
+
+  .team-title h1 {
+    font-size: 20px;
+  }
+
+  .team-card {
+    padding: 15px;
+  }
+
+  .team-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* ===== Mobile (420px) ===== */
+@media (max-width: 420px) {
+  .team-page {
+    padding: 15px;
+  }
+
+  .team-header {
+    flex-wrap: wrap;
+  }
+
+  .btn-add-team {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
+  .team-title h1 {
+    font-size: 18px;
+  }
+
+  .actions button {
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+}

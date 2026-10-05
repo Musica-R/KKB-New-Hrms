@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/EmpList.css';
-import { FiEdit2, FiX, FiSave, FiSearch, FiPlus, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
+import { FiEdit2, FiX, FiSave, FiPlus, FiUsers, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 import Lottie from "lottie-react";
 import animationData from "../LottieFiles/Employee Search.json";
 
@@ -30,7 +30,6 @@ export default function EmpList() {
 
   const [loading, setLoading] = useState(true);
   const [listLoading, setListLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
 
   const [editModal, setEditModal] = useState(false);
   const [editData, setEditData] = useState(null);
@@ -487,23 +486,13 @@ export default function EmpList() {
     setSaving(false);
   };
 
-  /* ---------------- SEARCH ---------------- */
-
-  const matchesSearch = (emp) =>
-    emp.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.empid?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.email?.toLowerCase().includes(searchTerm.toLowerCase());
-
-  const active = employees.filter(matchesSearch);
-  const inactive = inactiveEmployees.filter(matchesSearch);
-  const internList = interns.filter(matchesSearch);
-  const inactiveInternList = inactiveInterns.filter(matchesSearch);
+  /* ---------------- LISTS PER TAB (no search filtering) ---------------- */
 
   const listByTab = {
-    active,
-    inactive,
-    intern: internList,
-    inactive_intern: inactiveInternList,
+    active: employees,
+    inactive: inactiveEmployees,
+    intern: interns,
+    inactive_intern: inactiveInterns,
   };
 
   const headerCountLabel = () => {
@@ -615,6 +604,15 @@ export default function EmpList() {
             <FiPlus /> Add Employee
           </button>
 
+          {/* TEAM BUTTON — navigates to the Team Management page */}
+          <button
+            type="button"
+            className="btn-add-employee"
+            onClick={() => navigate('/admin/team-management')}
+          >
+            <FiUsers /> Team
+          </button>
+
           {/* COMPANY DROPDOWN */}
           <select
             className="branch-select"
@@ -647,16 +645,6 @@ export default function EmpList() {
               </option>
             ))}
           </select>
-
-          <div className="emplist-search-wrap">
-            <FiSearch className="search-icon" />
-            <input
-              className="emplist-search"
-              placeholder="Search employee..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
         </div>
       </div>
 
