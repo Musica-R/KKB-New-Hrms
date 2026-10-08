@@ -6,7 +6,7 @@ import { BsSuitcase2 } from 'react-icons/bs';
 import { MdOutlineNotificationsActive } from 'react-icons/md';
 import { GoOrganization } from 'react-icons/go';
 import { IoTicketOutline } from 'react-icons/io5';
-import logo from "../assets/logo.png";
+import logo from "../assets/kkb.webp";
 import { BsCurrencyDollar } from "react-icons/bs";
 
 
