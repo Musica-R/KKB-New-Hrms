@@ -649,6 +649,194 @@
   cursor: not-allowed;
 }
 
+/* ======================== APPLY LEAVE BUTTON ======================== */
+.ll-apply-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 11px 18px;
+  border-radius: 50px;
+  border: none;
+  background: #fff;
+  color: #0f766e;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+  white-space: nowrap;
+}
+
+.ll-apply-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.ll-apply-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ======================== APPLY LEAVE MODAL ======================== */
+.ll-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 1000;
+}
+
+.ll-modal {
+  background: #fff;
+  width: 100%;
+  max-width: 480px;
+  border-radius: 18px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  font-family: 'Outfit', sans-serif;
+}
+
+.ll-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  background: linear-gradient(135deg, #0f766e, #0d9488);
+  color: #fff;
+}
+
+.ll-modal-head h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.ll-modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.ll-modal-close:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.ll-modal-form {
+  padding: 20px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ll-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.ll-field-row {
+  display: flex;
+  gap: 12px;
+}
+
+.ll-field label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.ll-field select,
+.ll-field input,
+.ll-field textarea {
+  padding: 10px 12px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  color: #1e293b;
+  outline: none;
+  background: #fff;
+  resize: vertical;
+}
+
+.ll-field select:focus,
+.ll-field input:focus,
+.ll-field textarea:focus {
+  border-color: #0d9488;
+}
+
+.ll-hint {
+  color: #b45309;
+  font-size: 12px;
+}
+
+.ll-form-error {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.ll-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.ll-btn-cancel,
+.ll-btn-submit {
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ll-btn-cancel {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.ll-btn-submit {
+  background: #0d9488;
+  color: #fff;
+}
+
+.ll-btn-submit:hover:not(:disabled) {
+  background: #0f766e;
+}
+
+.ll-btn-cancel:disabled,
+.ll-btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+  .ll-field-row {
+    flex-direction: column;
+  }
+}
+
 
 /* ======================== 1024px (Tablet / Small Laptop) ======================== */
 

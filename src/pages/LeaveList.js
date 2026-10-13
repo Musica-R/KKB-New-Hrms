@@ -8,13 +8,18 @@ import {
   FiRefreshCw,
   FiAlertCircle,
   FiSearch,
+  FiPlus,
+  FiX,
 } from 'react-icons/fi';
 
-const COMPANY_API = 'https://storekkb.mpdatahub.com/api/list-company';
-const BRANCH_API = 'https://storekkb.mpdatahub.com/api/get-branch-for-company?company_id=';
+const BASE = 'https://storekkb.mpdatahub.com/api';
 
-const LEAVE_LIST_BASE = 'https://storekkb.mpdatahub.com/api/leave-list-branch';
-const UPDATE_STATUS_API = 'https://storekkb.mpdatahub.com/api/update-Leave-status';
+const COMPANY_API = `${BASE}/list-company`;
+const BRANCH_API = `${BASE}/get-branch-for-company?company_id=`;
+const EMPLOYEE_API = `${BASE}/employee-list-by-branch?branch_id=`;
+const LEAVE_LIST_BASE = `${BASE}/leave-list-branch`;
+const UPDATE_STATUS_API = `${BASE}/update-Leave-status`;
+const APPLY_LEAVE_API = `${BASE}/apply-leave`;
 
 const STATUS_CONFIG = {
   approved: {
@@ -24,6 +29,22 @@ const STATUS_CONFIG = {
   },
   pending: { label: 'Pending', icon: <FiClock />, cls: 'status--pending' },
   rejected: { label: 'Rejected', icon: <FiXCircle />, cls: 'status--rejected' },
+};
+
+/* Duration dropdown options */
+const DURATION_OPTIONS = [
+  { label: 'Half Day (0.5)', value: '0.5' },
+  { label: 'Full Day (1)', value: '1' },
+];
+
+/* Build headers with the login token */
+const authHeaders = () => {
+  const token = localStorage.getItem('token');
+  return {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
 };
 
 function formatDate(dateStr) {
@@ -36,6 +57,14 @@ function formatDate(dateStr) {
   });
 }
 
+const emptyForm = {
+  user_id: '',
+  leave_date: '',
+  reason: '',
+  duration: '1',
+  half_day: '',
+};
+
 export default function LeaveList() {
   const [leaves, setLeaves] = useState([]);
   const [meta, setMeta] = useState({ month: '', total: 0, branch_name: '' });
@@ -44,12 +73,21 @@ export default function LeaveList() {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Company / Branch dropdown state
   const [companies, setCompanies] = useState([]);
   const [branches, setBranches] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState('');
   const [selectedBranch, setSelectedBranch] = useState('');
+
+  // Employees + Apply Leave modal state
+  const [employees, setEmployees] = useState([]);
+  const [employeesLoading, setEmployeesLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+  const [applying, setApplying] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const now = new Date();
   const currentMonth = String(now.getMonth() + 1);
@@ -83,7 +121,6 @@ export default function LeaveList() {
 
   const handleDate = (e) => {
     const { name, value } = e.target;
-
     setDateFilter((prev) => ({
       ...prev,
       [name]: value,
@@ -94,6 +131,7 @@ export default function LeaveList() {
 
   useEffect(() => {
     fetchCompanies();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ---------------- FETCH COMPANIES ---------------- */
@@ -145,21 +183,52 @@ export default function LeaveList() {
     }
   };
 
-  /* ---------------- COMPANY CHANGE HANDLER ---------------- */
+  /* ---------------- COMPANY / BRANCH HANDLERS ---------------- */
 
   const handleCompanyChange = (e) => {
     const companyId = e.target.value;
     setSelectedCompany(companyId);
     setSelectedBranch('');
     setBranches([]);
+    setEmployees([]);
     fetchBranches(companyId, true);
   };
-
-  /* ---------------- BRANCH CHANGE HANDLER ---------------- */
 
   const handleBranchChange = (e) => {
     setSelectedBranch(e.target.value);
   };
+
+  /* ---------------- FETCH EMPLOYEES FOR SELECTED BRANCH ---------------- */
+
+  useEffect(() => {
+    if (!selectedBranch) {
+      setEmployees([]);
+      return;
+    }
+
+    const fetchEmployees = async () => {
+      try {
+        setEmployeesLoading(true);
+        const res = await fetch(`${EMPLOYEE_API}${selectedBranch}`, {
+          headers: authHeaders(),
+        });
+        const json = await res.json();
+
+        if (json.success) {
+          setEmployees(json.data || []);
+        } else {
+          setEmployees([]);
+        }
+      } catch (err) {
+        console.log(err);
+        setEmployees([]);
+      } finally {
+        setEmployeesLoading(false);
+      }
+    };
+
+    fetchEmployees();
+  }, [selectedBranch]);
 
   /* ---------------- FETCH LEAVES FOR SELECTED BRANCH + DATE FILTER ---------------- */
 
@@ -172,7 +241,8 @@ export default function LeaveList() {
         setError(null);
 
         const res = await fetch(
-          `${LEAVE_LIST_BASE}?branch_id=${selectedBranch}&user_id=${dateFilter.user_id}&month=${dateFilter.month}&year=${dateFilter.year}`
+          `${LEAVE_LIST_BASE}?branch_id=${selectedBranch}&user_id=${dateFilter.user_id}&month=${dateFilter.month}&year=${dateFilter.year}`,
+          { headers: authHeaders() }
         );
         const json = await res.json();
 
@@ -196,7 +266,7 @@ export default function LeaveList() {
     };
 
     fetchLeaves();
-  }, [selectedBranch, dateFilter]);
+  }, [selectedBranch, dateFilter, refreshKey]);
 
   const refetchLeaves = () => {
     setDateFilter({
@@ -204,7 +274,10 @@ export default function LeaveList() {
       month: currentMonth,
       year: currentYear,
     });
+    setRefreshKey((k) => k + 1);
   };
+
+  /* ---------------- UPDATE STATUS ---------------- */
 
   const updateStatus = async (leaveId, newStatus) => {
     if (updatingId) return;
@@ -214,10 +287,7 @@ export default function LeaveList() {
 
       const res = await fetch(UPDATE_STATUS_API, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
+        headers: authHeaders(),
         body: JSON.stringify({
           leave_id: leaveId,
           status: newStatus,
@@ -239,6 +309,99 @@ export default function LeaveList() {
       setUpdatingId(null);
     }
   };
+
+  /* ---------------- APPLY LEAVE (MODAL) ---------------- */
+
+  const openApplyModal = () => {
+    setFormError('');
+    setForm({
+      ...emptyForm,
+      user_id: employees.length > 0 ? String(employees[0].id) : '',
+    });
+    setShowModal(true);
+  };
+
+  const closeApplyModal = () => {
+    if (applying) return;
+    setShowModal(false);
+  };
+
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => {
+      const next = { ...prev, [name]: value };
+      // half_day session only applies when duration is 0.5
+      if (name === 'duration' && value !== '0.5') {
+        next.half_day = '';
+      }
+      return next;
+    });
+  };
+
+  // Show Morning/Afternoon only for a half day
+  const isHalfDay = form.duration === '0.5';
+
+  const submitLeave = async (e) => {
+    e.preventDefault();
+    setFormError('');
+
+    const duration = parseFloat(form.duration);
+
+    if (!form.user_id) return setFormError('Please select an employee.');
+    if (!form.leave_date) return setFormError('Please select the leave date.');
+    if (!form.reason.trim()) return setFormError('Please enter a reason.');
+    if (isHalfDay && !form.half_day)
+      return setFormError('Please choose Morning or Afternoon for a half day.');
+
+    const payload = {
+      user_id: Number(form.user_id), // selected employee's id
+      leave_date: form.leave_date,
+      reason: form.reason.trim(),
+      duration: duration, // 0.5 or 1
+      half_day: isHalfDay ? form.half_day : null,
+    };
+
+    try {
+      setApplying(true);
+
+      const res = await fetch(APPLY_LEAVE_API, {
+        method: 'POST',
+        headers: authHeaders(), // sends Authorization: Bearer <token>
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && (data.success || data.status)) {
+        setShowModal(false);
+
+        // jump to the month of the applied leave so it shows in the list
+        const d = new Date(form.leave_date);
+        setDateFilter({
+          user_id: '',
+          month: String(d.getMonth() + 1),
+          year: d.getFullYear(),
+        });
+        setRefreshKey((k) => k + 1);
+
+        alert(data.message || 'Leave applied successfully');
+      } else {
+        // Laravel validation errors come as { errors: { field: [msg] } }
+        if (data.errors) {
+          const firstMsg = Object.values(data.errors).flat()[0];
+          setFormError(firstMsg || 'Validation failed');
+        } else {
+          setFormError(data.message || 'Failed to apply leave');
+        }
+      }
+    } catch (err) {
+      setFormError('Network error while applying leave');
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  /* ---------------- FILTERS / COUNTS ---------------- */
 
   const filtered = leaves.filter((l) => {
     const matchStatus = filterStatus === 'all' || l.status === filterStatus;
@@ -302,9 +465,7 @@ export default function LeaveList() {
           </div>
         </td>
 
-        <td className="ll-date">
-          {formatDate(leave.leave_date)}
-        </td>
+        <td className="ll-date">{formatDate(leave.leave_date)}</td>
 
         <td className="ll-reason-cell">
           <div className="ll-reason-text" title={leave.reason}>
@@ -312,9 +473,7 @@ export default function LeaveList() {
           </div>
         </td>
 
-        <td className="ll-date ll-dim">
-          {formatDate(leave.created_at)}
-        </td>
+        <td className="ll-date ll-dim">{formatDate(leave.created_at)}</td>
 
         <td>{formatDuration(leave.duration)}</td>
 
@@ -332,9 +491,7 @@ export default function LeaveList() {
               className="ll-status-dropdown"
               value={leave.status || 'pending'}
               disabled={isUpdating}
-              onChange={(e) =>
-                updateStatus(leave.id, e.target.value)
-              }
+              onChange={(e) => updateStatus(leave.id, e.target.value)}
             >
               <option value="pending">Pending</option>
               <option value="approved">Approved</option>
@@ -412,6 +569,16 @@ export default function LeaveList() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+
+          {/* APPLY LEAVE BUTTON */}
+          <button
+            className="ll-apply-btn"
+            onClick={openApplyModal}
+            disabled={!selectedBranch || employeesLoading}
+            title="Apply leave for an employee"
+          >
+            <FiPlus /> Apply Leave
+          </button>
 
           <button
             className="ll-refresh-btn"
@@ -543,6 +710,129 @@ export default function LeaveList() {
             </>
           )}
         </>
+      )}
+
+      {/* ================= APPLY LEAVE MODAL ================= */}
+      {showModal && (
+        <div className="ll-modal-overlay" onClick={closeApplyModal}>
+          <div className="ll-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="ll-modal-head">
+              <h2>Apply Leave</h2>
+              <button
+                type="button"
+                className="ll-modal-close"
+                onClick={closeApplyModal}
+              >
+                <FiX />
+              </button>
+            </div>
+
+            <form className="ll-modal-form" onSubmit={submitLeave}>
+              <div className="ll-field">
+                <label>Employee</label>
+                <select
+                  name="user_id"
+                  value={form.user_id}
+                  onChange={handleFormChange}
+                  required
+                >
+                  <option value="" disabled>
+                    Select Employee
+                  </option>
+                  {employees.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name}
+                    </option>
+                  ))}
+                </select>
+                {employees.length === 0 && (
+                  <small className="ll-hint">
+                    No employees found for this branch.
+                  </small>
+                )}
+              </div>
+
+              <div className="ll-field-row">
+                <div className="ll-field">
+                  <label>Leave Date</label>
+                  <input
+                    type="date"
+                    name="leave_date"
+                    value={form.leave_date}
+                    onChange={handleFormChange}
+                    required
+                  />
+                </div>
+
+                <div className="ll-field">
+                  <label>Duration</label>
+                  <select
+                    name="duration"
+                    value={form.duration}
+                    onChange={handleFormChange}
+                    required
+                  >
+                    {DURATION_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {isHalfDay && (
+                <div className="ll-field">
+                  <label>Half Day Session</label>
+                  <select
+                    name="half_day"
+                    value={form.half_day}
+                    onChange={handleFormChange}
+                    required
+                  >
+                    <option value="" disabled>
+                      Select session
+                    </option>
+                    <option value="morning">Morning</option>
+                    <option value="afternoon">Afternoon</option>
+                  </select>
+                </div>
+              )}
+
+              <div className="ll-field">
+                <label>Reason</label>
+                <textarea
+                  name="reason"
+                  rows="3"
+                  value={form.reason}
+                  onChange={handleFormChange}
+                  placeholder="Enter the reason for leave"
+                  required
+                />
+              </div>
+
+              {formError && <div className="ll-form-error">{formError}</div>}
+
+              <div className="ll-modal-actions">
+                <button
+                  type="button"
+                  className="ll-btn-cancel"
+                  onClick={closeApplyModal}
+                  disabled={applying}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="ll-btn-submit"
+                  disabled={applying}
+                >
+                  {applying ? 'Applying…' : 'Apply Leave'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

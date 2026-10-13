@@ -1,14 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/PermissionList.css';
-import { FiClock, FiCheckCircle, FiXCircle, FiRefreshCw, FiAlertCircle, FiSearch } from 'react-icons/fi';
-import Lottie from "lottie-react";
-import animationData from "../LottieFiles/Allow Permission.json";
+import {
+  FiClock,
+  FiCheckCircle,
+  FiXCircle,
+  FiRefreshCw,
+  FiAlertCircle,
+  FiSearch,
+  FiPlus,
+  FiX,
+} from 'react-icons/fi';
+import Lottie from 'lottie-react';
+import animationData from '../LottieFiles/Allow Permission.json';
 
-const COMPANY_API = 'https://storekkb.mpdatahub.com/api/list-company';
-const BRANCH_API = 'https://storekkb.mpdatahub.com/api/get-branch-for-company?company_id=';
+const BASE = 'https://storekkb.mpdatahub.com/api';
 
-const PERMISSION_LIST_BASE = 'https://storekkb.mpdatahub.com/api/permission-list-by-branch';
-const APPROVE_PERMISSION_API = 'https://storekkb.mpdatahub.com/api/approve-permission';
+const COMPANY_API = `${BASE}/list-company`;
+const BRANCH_API = `${BASE}/get-branch-for-company?company_id=`;
+const EMPLOYEE_API = `${BASE}/employee-list-by-branch?branch_id=`;
+const PERMISSION_LIST_BASE = `${BASE}/permission-list-by-branch`;
+const APPROVE_PERMISSION_API = `${BASE}/approve-permission`;
+const APPLY_PERMISSION_API = `${BASE}/apply-permission`;
 
 const STATUS_CONFIG = {
   approved: {
@@ -24,6 +36,34 @@ const STATUS_CONFIG = {
   },
 };
 
+/* Build headers with the login token */
+const authHeaders = () => {
+  const token = localStorage.getItem('token');
+  return {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
+
+/* "14:05" (from <input type="time">) -> "2:05 PM" (Laravel format g:i A) */
+const to12Hour = (value) => {
+  if (!value) return '';
+  const [h, m] = value.split(':');
+  const hour = parseInt(h, 10);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const displayHour = hour % 12 || 12;
+  return `${displayHour}:${m} ${ampm}`;
+};
+
+const emptyForm = {
+  user_id: '',
+  attendance_date: '',
+  start_time: '',
+  end_time: '',
+  reason: '',
+};
+
 export default function PermissionList() {
   const [permissions, setPermissions] = useState([]);
   const [meta, setMeta] = useState({ branch_name: '', total: 0 });
@@ -32,12 +72,21 @@ export default function PermissionList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [updatingId, setUpdatingId] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Company / Branch dropdown state
   const [companies, setCompanies] = useState([]);
   const [branches, setBranches] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState('');
   const [selectedBranch, setSelectedBranch] = useState('');
+
+  // Employees + Apply Permission modal state
+  const [employees, setEmployees] = useState([]);
+  const [employeesLoading, setEmployeesLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+  const [applying, setApplying] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const now = new Date();
   const currentMonth = String(now.getMonth() + 1);
@@ -76,6 +125,7 @@ export default function PermissionList() {
 
   useEffect(() => {
     fetchCompanies();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ---------------- FETCH COMPANIES ---------------- */
@@ -120,21 +170,52 @@ export default function PermissionList() {
     }
   };
 
-  /* ---------------- COMPANY CHANGE HANDLER ---------------- */
+  /* ---------------- COMPANY / BRANCH HANDLERS ---------------- */
 
   const handleCompanyChange = (e) => {
     const companyId = e.target.value;
     setSelectedCompany(companyId);
     setSelectedBranch('');
     setBranches([]);
+    setEmployees([]);
     fetchBranches(companyId, true);
   };
-
-  /* ---------------- BRANCH CHANGE HANDLER ---------------- */
 
   const handleBranchChange = (e) => {
     setSelectedBranch(e.target.value);
   };
+
+  /* ---------------- FETCH EMPLOYEES FOR SELECTED BRANCH ---------------- */
+
+  useEffect(() => {
+    if (!selectedBranch) {
+      setEmployees([]);
+      return;
+    }
+
+    const fetchEmployees = async () => {
+      try {
+        setEmployeesLoading(true);
+        const res = await fetch(`${EMPLOYEE_API}${selectedBranch}`, {
+          headers: authHeaders(),
+        });
+        const json = await res.json();
+
+        if (json.success) {
+          setEmployees(json.data || []);
+        } else {
+          setEmployees([]);
+        }
+      } catch (err) {
+        console.error(err);
+        setEmployees([]);
+      } finally {
+        setEmployeesLoading(false);
+      }
+    };
+
+    fetchEmployees();
+  }, [selectedBranch]);
 
   /* ---------------- UPDATE STATUS ---------------- */
 
@@ -144,10 +225,7 @@ export default function PermissionList() {
       setUpdatingId(id);
       const res = await fetch(`${APPROVE_PERMISSION_API}/${id}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
+        headers: authHeaders(),
         body: JSON.stringify({ status: newStatus }),
       });
 
@@ -178,7 +256,8 @@ export default function PermissionList() {
         setError(null);
 
         const res = await fetch(
-          `${PERMISSION_LIST_BASE}?branch_id=${selectedBranch}&user_id=${dateFilter.user_id}&month=${dateFilter.month}&year=${dateFilter.year}`
+          `${PERMISSION_LIST_BASE}?branch_id=${selectedBranch}&user_id=${dateFilter.user_id}&month=${dateFilter.month}&year=${dateFilter.year}`,
+          { headers: authHeaders() }
         );
         const json = await res.json();
 
@@ -202,7 +281,7 @@ export default function PermissionList() {
     };
 
     fetchPermissions();
-  }, [selectedBranch, dateFilter]);
+  }, [selectedBranch, dateFilter, refreshKey]);
 
   const refetchPermissions = () => {
     setDateFilter({
@@ -210,7 +289,91 @@ export default function PermissionList() {
       month: currentMonth,
       year: currentYear,
     });
+    setRefreshKey((k) => k + 1);
   };
+
+  /* ---------------- APPLY PERMISSION (MODAL) ---------------- */
+
+  const openApplyModal = () => {
+    setFormError('');
+    setForm({
+      ...emptyForm,
+      user_id: employees.length > 0 ? String(employees[0].id) : '',
+    });
+    setShowModal(true);
+  };
+
+  const closeApplyModal = () => {
+    if (applying) return;
+    setShowModal(false);
+  };
+
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const submitPermission = async (e) => {
+    e.preventDefault();
+    setFormError('');
+
+    if (!form.user_id) return setFormError('Please select an employee.');
+    if (!form.attendance_date) return setFormError('Please select the date.');
+    if (!form.start_time) return setFormError('Please select the start time.');
+    if (!form.end_time) return setFormError('Please select the end time.');
+    if (form.end_time <= form.start_time)
+      return setFormError('End time must be after the start time.');
+    if (!form.reason.trim()) return setFormError('Please enter a reason.');
+
+    const payload = {
+      user_id: Number(form.user_id), // selected employee's id
+      attendance_date: form.attendance_date,
+      start_time: to12Hour(form.start_time), // e.g. "9:30 AM"
+      end_time: to12Hour(form.end_time), // e.g. "11:00 AM"
+      reason: form.reason.trim(),
+    };
+
+    try {
+      setApplying(true);
+
+      const res = await fetch(APPLY_PERMISSION_API, {
+        method: 'POST',
+        headers: authHeaders(), // sends Authorization: Bearer <token>
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && (data.success || data.status)) {
+        setShowModal(false);
+
+        // jump to the month of the applied permission so it shows in the list
+        const d = new Date(form.attendance_date);
+        setDateFilter({
+          user_id: '',
+          month: String(d.getMonth() + 1),
+          year: d.getFullYear(),
+        });
+        setRefreshKey((k) => k + 1);
+
+        alert(data.message || 'Permission applied successfully');
+      } else {
+        // Laravel validation errors come as { errors: { field: [msg] } }
+        if (data.errors) {
+          const firstMsg = Object.values(data.errors).flat()[0];
+          setFormError(firstMsg || 'Validation failed');
+        } else {
+          setFormError(data.message || 'Failed to apply permission');
+        }
+      }
+    } catch (err) {
+      setFormError('Network error while applying permission');
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  /* ---------------- FORMATTERS ---------------- */
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '—';
@@ -280,7 +443,6 @@ export default function PermissionList() {
         <td>
           <div className="pl-emp-info">
             <span className="pl-name">{p.name}</span>
-            {/* {p.empid && <span className="pl-empid">{p.empid}</span>} */}
           </div>
         </td>
         <td>{formatDate(p.attendance_date)}</td>
@@ -290,9 +452,7 @@ export default function PermissionList() {
           </span>
         </td>
         <td>
-          <span className="pl-hours">
-            {formatDuration(p.permission_hours)}
-          </span>
+          <span className="pl-hours">{formatDuration(p.permission_hours)}</span>
         </td>
         <td className="pl-reason-cell">
           <div className="pl-reason-text" title={p.reason}>
@@ -339,7 +499,11 @@ export default function PermissionList() {
     <div className="permission-page fade-in">
       <div className="permission-header">
         <div className="permission-title-group">
-          <Lottie animationData={animationData} loop={true} style={{ width: 70, height: 70 }} />
+          <Lottie
+            animationData={animationData}
+            loop={true}
+            style={{ width: 70, height: 70 }}
+          />
           <div>
             <h1>Permission List</h1>
             <p>
@@ -393,6 +557,17 @@ export default function PermissionList() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+
+          {/* APPLY PERMISSION BUTTON */}
+          <button
+            className="pl-apply-btn"
+            onClick={openApplyModal}
+            disabled={!selectedBranch || employeesLoading}
+            title="Apply permission for an employee"
+          >
+            <FiPlus /> Apply Permission
+          </button>
+
           <button
             className={`pl-refresh-btn ${loading ? 'spinning' : ''}`}
             onClick={refetchPermissions}
@@ -418,16 +593,14 @@ export default function PermissionList() {
         </div>
         <div className="form-group">
           <label>Year Filter</label>
-          <select
-            name="year"
-            value={dateFilter.year}
-            onChange={handleDate}
-          >
-            {Array.from({ length: 11 }, (_, i) => currentYear - 5 + i).map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
+          <select name="year" value={dateFilter.year} onChange={handleDate}>
+            {Array.from({ length: 11 }, (_, i) => currentYear - 5 + i).map(
+              (y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              )
+            )}
           </select>
         </div>
       </div>
@@ -514,6 +687,117 @@ export default function PermissionList() {
             </div>
           )}
         </>
+      )}
+
+      {/* ================= APPLY PERMISSION MODAL ================= */}
+      {showModal && (
+        <div className="pl-modal-overlay" onClick={closeApplyModal}>
+          <div className="pl-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="pl-modal-head">
+              <h2>Apply Permission</h2>
+              <button
+                type="button"
+                className="pl-modal-close"
+                onClick={closeApplyModal}
+              >
+                <FiX />
+              </button>
+            </div>
+
+            <form className="pl-modal-form" onSubmit={submitPermission}>
+              <div className="pl-field">
+                <label>Employee</label>
+                <select
+                  name="user_id"
+                  value={form.user_id}
+                  onChange={handleFormChange}
+                  required
+                >
+                  <option value="" disabled>
+                    Select Employee
+                  </option>
+                  {employees.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name}
+                    </option>
+                  ))}
+                </select>
+                {employees.length === 0 && (
+                  <small className="pl-hint">
+                    No employees found for this branch.
+                  </small>
+                )}
+              </div>
+
+              <div className="pl-field">
+                <label>Date</label>
+                <input
+                  type="date"
+                  name="attendance_date"
+                  value={form.attendance_date}
+                  onChange={handleFormChange}
+                  required
+                />
+              </div>
+
+              <div className="pl-field-row">
+                <div className="pl-field">
+                  <label>Start Time</label>
+                  <input
+                    type="time"
+                    name="start_time"
+                    value={form.start_time}
+                    onChange={handleFormChange}
+                    required
+                  />
+                </div>
+
+                <div className="pl-field">
+                  <label>End Time</label>
+                  <input
+                    type="time"
+                    name="end_time"
+                    value={form.end_time}
+                    onChange={handleFormChange}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="pl-field">
+                <label>Reason</label>
+                <textarea
+                  name="reason"
+                  rows="3"
+                  value={form.reason}
+                  onChange={handleFormChange}
+                  placeholder="Enter the reason for permission"
+                  required
+                />
+              </div>
+
+              {formError && <div className="pl-form-error">{formError}</div>}
+
+              <div className="pl-modal-actions">
+                <button
+                  type="button"
+                  className="pl-btn-cancel"
+                  onClick={closeApplyModal}
+                  disabled={applying}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="pl-btn-submit"
+                  disabled={applying}
+                >
+                  {applying ? 'Applying…' : 'Apply Permission'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

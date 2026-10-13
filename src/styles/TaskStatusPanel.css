@@ -122,6 +122,145 @@
   flex-shrink: 0;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   Add this at the END of TaskStatusPanel.css
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Toolbar: Daily / Monthly + filters + PDF ── */
+.tsp-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+}
+
+.tsp-mode-toggle {
+  display: inline-flex;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tsp-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tsp-mode-btn + .tsp-mode-btn {
+  border-left: 1.5px solid var(--border-strong);
+}
+
+.tsp-mode-btn:hover:not(.tsp-mode-btn--active) {
+  background: var(--blue-50);
+  color: var(--blue-600);
+}
+
+.tsp-mode-btn--active {
+  background: var(--blue-600);
+  color: #fff;
+}
+
+.tsp-month-filters {
+  display: flex;
+  gap: 8px;
+}
+
+.tsp-mini-select {
+  padding: 8px 12px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--surface);
+  cursor: pointer;
+  outline: none;
+}
+
+.tsp-mini-select:focus {
+  border-color: var(--blue-500);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.tsp-pdf-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border: none;
+  border-radius: 8px;
+  background: var(--blue-600);
+  color: #fff;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.tsp-pdf-btn:hover:not(:disabled) {
+  background: var(--blue-700);
+  transform: translateY(-1px);
+}
+
+.tsp-pdf-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Error box ── */
+.tsp-error {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-radius: 10px;
+  padding: 14px 18px;
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+
+/* ── Active summary tile highlight ── */
+.tsp-summary-item.active {
+  background: var(--blue-50);
+  box-shadow: inset 0 -3px 0 var(--blue-600);
+}
+
+/* ── Missing priority / status styles (very_low, very_high, not_completed) ── */
+.tsp-priority-very-low  { color: #0369a1; background: #f0f9ff; border-color: #bae6fd; }
+.tsp-priority-very-high { color: #1e3a8a; background: #bfdbfe; border-color: #60a5fa; }
+.tsp-dot-very-low  { background: #7dd3fc; }
+.tsp-dot-very-high { background: #1e3a8a; }
+
+.tsp-status-not_completed { color: #1e40af; background: #eff6ff; border-color: #93c5fd; }
+
+@media (max-width: 768px) {
+  .tsp-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tsp-mode-toggle { width: 100%; }
+  .tsp-mode-btn { flex: 1; justify-content: center; }
+  .tsp-month-filters .tsp-mini-select { flex: 1; }
+  .tsp-pdf-btn { margin-left: 0; justify-content: center; }
+}
+
 .tsp-header-title {
   margin: 0 0 4px;
   font-size: 20px;
