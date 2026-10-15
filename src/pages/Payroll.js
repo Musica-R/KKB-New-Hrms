@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import '../styles/Payroll.css';
-import logo from "../assets/logo.png";
+import logo from "../assets/logo2.jpeg";
 
 const BASE_URL = 'https://storekkb.mpdatahub.com/api';
 
@@ -19,6 +19,13 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
+/* money formatter – always 2 decimals (PF / ESI have paise) */
+const fmt = (n) =>
+  Number(n || 0).toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
 /* ─────────────────────────────────────────────
    AMOUNT TO WORDS
 ───────────────────────────────────────────── */
@@ -29,7 +36,7 @@ function amountToWords(amount) {
 
   const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
 
-  if (amount === 0) return 'Zero Rupees Only';
+  if (!amount || amount === 0) return 'Zero Rupees Only';
 
   function convertHundreds(n) {
     let str = '';
@@ -46,7 +53,7 @@ function amountToWords(amount) {
   if (n >= 1000) { result += convertHundreds(Math.floor(n / 1000)) + 'Thousand '; n %= 1000; }
   if (n > 0) result += convertHundreds(n);
 
-  return result.trim() + ' Rupees Only';
+  return (result.trim() || 'Zero') + ' Rupees Only';
 }
 
 /* ─────────────────────────────────────────────
@@ -61,12 +68,10 @@ function PayslipModal({ slip, employee, onClose, logoSrc }) {
     setDownloading(true);
     let clone = null;
     try {
-      /* ── Build an off-screen desktop-width clone ── */
       const DESKTOP_W = 780;
 
       clone = printRef.current.cloneNode(true);
 
-      /* Force all desktop styles inline on the clone wrapper */
       Object.assign(clone.style, {
         position: 'fixed',
         top: '-99999px',
@@ -103,13 +108,11 @@ function PayslipModal({ slip, employee, onClose, logoSrc }) {
         attGrid.style.gridTemplateColumns = 'repeat(4, 1fr)';
       }
 
-      /* Fix logo src if it got stripped during clone */
       const logoImg = clone.querySelector('.ps-logo');
       if (logoImg && logoSrc) logoImg.src = logoSrc;
 
       document.body.appendChild(clone);
 
-      /* Small settle delay so fonts/images paint */
       await new Promise(r => setTimeout(r, 120));
 
       const canvas = await html2canvas(clone, {
@@ -124,7 +127,6 @@ function PayslipModal({ slip, employee, onClose, logoSrc }) {
 
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
 
-      /* ── Fit onto A4 ── */
       const A4_W = 210;
       const A4_H = 297;
       const MARGIN = 10;
@@ -149,7 +151,7 @@ function PayslipModal({ slip, employee, onClose, logoSrc }) {
         }
       }
 
-      const fileName = `Payslip_${slip.employee_name?.replace(/\s+/g, '_')}_${MONTH_NAMES[slip.month]}_${slip.year}.pdf`;
+      const fileName = `Payslip_${slip.employee_name?.replace(/\s+/g, '_')}_${MONTH_NAMES[slip.month]}_${slip.year}${slip._daily ? '_TillDate' : ''}.pdf`;
       pdf.save(fileName);
     } catch (err) {
       console.error('PDF generation failed:', err);
@@ -162,14 +164,37 @@ function PayslipModal({ slip, employee, onClose, logoSrc }) {
 
   if (!slip) return null;
 
+  const isDaily = !!slip._daily;
+
   const generatedDate = slip.generated_at
     ? new Date(slip.generated_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
     : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
 
-  const grossEarnings = Number(slip.base_salary) + Number(slip.overtime_pay || 0);
-  const totalDeductions = Number(slip.lop_amount);
-  const netPay = Number(slip.final_salary);
+  const pfAmount = Number(slip.pf_amount || 0);
+  const esiAmount = Number(slip.esi_amount || 0);
+  const lopAmount = Number(slip.lop_amount || 0);
+  const latePenalty = Number(slip.late_penalty_amount || 0);
+  const overtimePay = Number(slip.overtime_pay || 0);
+
+  // lop_amount from the API already includes the late-penalty days,
+  // so split them to avoid showing the late penalty twice.
+  const lopOnly = Math.max(lopAmount - latePenalty, 0);
+
+  // Daily  → earned-till-date (gross_salary) minus PF/ESI
+  // Monthly → base salary (+OT) minus LOP, PF, ESI
+  const grossEarnings = isDaily
+    ? Number(slip.gross_salary || 0)
+    : Number(slip.base_salary || 0) + overtimePay;
+
+  const totalDeductions = isDaily
+    ? pfAmount + esiAmount
+    : lopAmount + pfAmount + esiAmount;
+
+  const netPay = Number(slip.final_salary || 0);
   const netInWords = amountToWords(netPay);
+
+  const totalDaysInMonth = slip.month_days ?? 31;
+  const workingDays = slip.working_days ?? 0;
 
   return createPortal(
     <div className="pay-modal-overlay" onClick={onClose}>
@@ -197,11 +222,10 @@ function PayslipModal({ slip, employee, onClose, logoSrc }) {
                 {logoSrc && <img src={logoSrc} alt="Logo" className="ps-logo" crossOrigin="anonymous" />}
                 <div>
                   <div className="ps-company-name">Ayya Store</div>
-                  {/* <div className="ps-company-addr">Salem, Tamil Nadu, India</div> */}
                 </div>
               </div>
               <div className="ps-title-block">
-                <div className="ps-slip-badge">Salary Slip</div>
+                <div className="ps-slip-badge">{isDaily ? 'Salary Slip (Till Date)' : 'Salary Slip'}</div>
                 <div className="ps-period">{MONTH_NAMES[slip.month]} {slip.year}</div>
               </div>
             </div>
@@ -218,7 +242,11 @@ function PayslipModal({ slip, employee, onClose, logoSrc }) {
               </div>
               <div className="ps-info-cell">
                 <div className="ps-info-lbl">Pay Period</div>
-                <div className="ps-info-val">{MONTH_NAMES[slip.month]} {slip.year}</div>
+                <div className="ps-info-val">
+                  {isDaily && slip.to_date
+                    ? `${slip.from_date || ''} to ${slip.to_date}`.trim()
+                    : `${MONTH_NAMES[slip.month]} ${slip.year}`}
+                </div>
               </div>
               <div className="ps-info-cell">
                 <div className="ps-info-lbl">Designation</div>
@@ -239,19 +267,19 @@ function PayslipModal({ slip, employee, onClose, logoSrc }) {
             <div className="ps-attendance-grid">
               <div className="ps-att-cell">
                 <div className="ps-att-lbl">Total Days</div>
-                <div className="ps-att-val">{slip.total_days ?? 31}</div>
+                <div className="ps-att-val">{totalDaysInMonth}</div>
               </div>
               <div className="ps-att-cell">
                 <div className="ps-att-lbl">Working Days</div>
-                <div className="ps-att-val">{slip.working_days ?? (31 - (slip.sundays ?? 5) - (slip.holidays ?? 1))}</div>
+                <div className="ps-att-val">{workingDays}</div>
               </div>
               <div className="ps-att-cell">
                 <div className="ps-att-lbl">Sundays</div>
-                <div className="ps-att-val">{slip.sundays ?? 5}</div>
+                <div className="ps-att-val">{slip.sundays ?? 0}</div>
               </div>
               <div className="ps-att-cell">
                 <div className="ps-att-lbl">Holidays</div>
-                <div className="ps-att-val">{slip.holidays ?? 1}</div>
+                <div className="ps-att-val">{slip.holidays ?? 0}</div>
               </div>
               <div className="ps-att-cell">
                 <div className="ps-att-lbl">Days Present</div>
@@ -267,11 +295,11 @@ function PayslipModal({ slip, employee, onClose, logoSrc }) {
               </div>
               <div className="ps-att-cell">
                 <div className="ps-att-lbl">Absent / LOP</div>
-                <div className="ps-att-val red">{slip.lop_days ?? slip.total_lop_days ?? slip.absent_days ?? 0}</div>
+                <div className="ps-att-val red">{slip.total_lop_days ?? slip.lop_days ?? slip.absent_days ?? 0}</div>
               </div>
               <div className="ps-att-cell">
                 <div className="ps-att-lbl">Paid Days</div>
-                <div className="ps-att-val blue">{slip.worked_days ?? slip.paid_days}</div>
+                <div className="ps-att-val blue">{slip.paid_days ?? slip.worked_days ?? 0}</div>
               </div>
               <div className="ps-att-cell">
                 <div className="ps-att-lbl">Late (min)</div>
@@ -283,7 +311,7 @@ function PayslipModal({ slip, employee, onClose, logoSrc }) {
               </div>
               <div className="ps-att-cell">
                 <div className="ps-att-lbl">Per Day Rate</div>
-                <div className="ps-att-val">₹ {Number(slip.per_day_salary || 0).toLocaleString()}</div>
+                <div className="ps-att-val">₹ {fmt(slip.per_day_salary)}</div>
               </div>
             </div>
 
@@ -295,13 +323,22 @@ function PayslipModal({ slip, employee, onClose, logoSrc }) {
                   <tr><th>Earnings</th><th style={{ textAlign: 'right' }}>Amount (₹)</th></tr>
                 </thead>
                 <tbody>
-                  <tr><td>Basic Salary</td><td style={{ textAlign: 'right' }}>₹ {Number(slip.base_salary).toLocaleString()}</td></tr>
-                  {Number(slip.overtime_pay) > 0 && (
-                    <tr><td>Overtime Pay</td><td style={{ textAlign: 'right' }}>₹ {Number(slip.overtime_pay).toLocaleString()}</td></tr>
+                  {isDaily ? (
+                    <>
+                      <tr><td>Monthly Basic Salary</td><td style={{ textAlign: 'right' }}>₹ {fmt(slip.base_salary)}</td></tr>
+                      <tr><td>Earned Salary (Till Date)</td><td style={{ textAlign: 'right' }}>₹ {fmt(slip.gross_salary)}</td></tr>
+                    </>
+                  ) : (
+                    <>
+                      <tr><td>Basic Salary</td><td style={{ textAlign: 'right' }}>₹ {fmt(slip.base_salary)}</td></tr>
+                      {overtimePay > 0 && (
+                        <tr><td>Overtime Pay</td><td style={{ textAlign: 'right' }}>₹ {fmt(overtimePay)}</td></tr>
+                      )}
+                    </>
                   )}
                 </tbody>
                 <tfoot>
-                  <tr><td>Gross Earnings</td><td style={{ textAlign: 'right' }}>₹ {grossEarnings.toLocaleString()}</td></tr>
+                  <tr><td>Gross Earnings</td><td style={{ textAlign: 'right' }}>₹ {fmt(grossEarnings)}</td></tr>
                 </tfoot>
               </table>
 
@@ -310,19 +347,31 @@ function PayslipModal({ slip, employee, onClose, logoSrc }) {
                   <tr><th>Deductions</th><th style={{ textAlign: 'right' }}>Amount (₹)</th></tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td>Loss of Pay (LOP)</td>
-                    <td className="td-red" style={{ textAlign: 'right' }}>₹ {Number(slip.lop_amount).toLocaleString()}</td>
-                  </tr>
-                  {Number(slip.late_penalty_amount) > 0 && (
-                    <tr>
-                      <td>Late Penalty</td>
-                      <td className="td-red" style={{ textAlign: 'right' }}>₹ {Number(slip.late_penalty_amount).toLocaleString()}</td>
-                    </tr>
+                  {!isDaily && (
+                    <>
+                      <tr>
+                        <td>Loss of Pay (LOP)</td>
+                        <td className="td-red" style={{ textAlign: 'right' }}>₹ {fmt(lopOnly)}</td>
+                      </tr>
+                      {latePenalty > 0 && (
+                        <tr>
+                          <td>Late Penalty</td>
+                          <td className="td-red" style={{ textAlign: 'right' }}>₹ {fmt(latePenalty)}</td>
+                        </tr>
+                      )}
+                    </>
                   )}
+                  <tr>
+                    <td>PF{slip.pf_percentage ? ` (${slip.pf_percentage}%)` : ''}</td>
+                    <td className="td-red" style={{ textAlign: 'right' }}>₹ {fmt(pfAmount)}</td>
+                  </tr>
+                  <tr>
+                    <td>ESI{slip.esi_percentage ? ` (${slip.esi_percentage}%)` : ''}</td>
+                    <td className="td-red" style={{ textAlign: 'right' }}>₹ {fmt(esiAmount)}</td>
+                  </tr>
                 </tbody>
                 <tfoot>
-                  <tr><td>Total Deductions</td><td className="td-red" style={{ textAlign: 'right' }}>₹ {totalDeductions.toLocaleString()}</td></tr>
+                  <tr><td>Total Deductions</td><td className="td-red" style={{ textAlign: 'right' }}>₹ {fmt(totalDeductions)}</td></tr>
                 </tfoot>
               </table>
             </div>
@@ -334,7 +383,7 @@ function PayslipModal({ slip, employee, onClose, logoSrc }) {
                 <div className="ps-net-month">{MONTH_NAMES[slip.month]} {slip.year}</div>
               </div>
               <div className="ps-net-right">
-                <div className="ps-net-amount">₹ {netPay.toLocaleString()}</div>
+                <div className="ps-net-amount">₹ {fmt(netPay)}</div>
               </div>
             </div>
 
@@ -369,9 +418,11 @@ function PayslipModal({ slip, employee, onClose, logoSrc }) {
 ───────────────────────────────────────────── */
 function SummaryCards({ data, period, meta }) {
   const totalFinal = data.reduce((s, e) => s + (e.final_salary || 0), 0);
+  const totalPF = data.reduce((s, e) => s + Number(e.pf_amount || 0), 0);
+  const totalESI = data.reduce((s, e) => s + Number(e.esi_amount || 0), 0);
 
   const first = data[0] || {};
-  const totalDays = meta?.total_days ?? first.total_days ?? '—';
+  const totalDays = meta?.total_days ?? first.month_days ?? first.total_days ?? '—';
   const sundays = meta?.sundays ?? first.sundays ?? '—';
   const holidays = meta?.holidays ?? first.holidays ?? '—';
 
@@ -383,7 +434,15 @@ function SummaryCards({ data, period, meta }) {
       </div>
       <div className="pay-summary-card">
         <span className="pay-summary-label">Total Payable</span>
-        <span className="pay-summary-value pay-summary-value--success">₹ {totalFinal.toLocaleString()}</span>
+        <span className="pay-summary-value pay-summary-value--success">₹ {fmt(totalFinal)}</span>
+      </div>
+      <div className="pay-summary-card">
+        <span className="pay-summary-label">Total PF</span>
+        <span className="pay-summary-value pay-summary-value--muted">₹ {fmt(totalPF)}</span>
+      </div>
+      <div className="pay-summary-card">
+        <span className="pay-summary-label">Total ESI</span>
+        <span className="pay-summary-value pay-summary-value--muted">₹ {fmt(totalESI)}</span>
       </div>
       <div className="pay-summary-card pay-summary-card--sm">
         <span className="pay-summary-label">Total Days</span>
@@ -423,7 +482,6 @@ function MonthlyPayroll({ employees, branchId }) {
   const [activeSlip, setActiveSlip] = useState(null);
   const [activeEmployee, setActiveEmployee] = useState(null);
 
-  // Reset the report whenever the branch changes so stale data isn't shown
   useEffect(() => {
     setList([]);
     setMode(null);
@@ -504,7 +562,9 @@ function MonthlyPayroll({ employees, branchId }) {
       });
       const result = await res.json();
       if (result.success && result.data?.length > 0) {
-        setActiveSlip(result.data[0]);
+        // merge the row we already have so PF/ESI always show,
+        // even if the slip endpoint omits them
+        setActiveSlip({ ...emp, ...result.data[0] });
         setActiveEmployee(employees.find(e => e.id === emp.user_id) || null);
       } else {
         alert('No payslip found for this employee.');
@@ -618,6 +678,8 @@ function MonthlyPayroll({ employees, branchId }) {
                   <th className="pay-th pay-th--r">LOP Amt</th>
                   <th className="pay-th pay-th--c">Late</th>
                   <th className="pay-th pay-th--c">Late Penalty</th>
+                  <th className="pay-th pay-th--r">PF</th>
+                  <th className="pay-th pay-th--r">ESI</th>
                   <th className="pay-th pay-th--final pay-th--r">Net Pay</th>
                   <th className="pay-th pay-th--action">Action</th>
                 </tr>
@@ -628,19 +690,25 @@ function MonthlyPayroll({ employees, branchId }) {
                     <td className="pay-td pay-td--num">{idx + 1}</td>
                     <td className="pay-td pay-td--bold">{emp.employee_name}</td>
                     <td className="pay-td pay-td--mono">{emp.employee_id?.toUpperCase()}</td>
-                    <td className="pay-td pay-td--r">₹ {Number(emp.base_salary).toLocaleString()}</td>
+                    <td className="pay-td pay-td--r">₹ {fmt(emp.base_salary)}</td>
                     <td className="pay-td pay-td--c">{emp.working_days}</td>
                     <td className="pay-td pay-td--c pay-td--success">{emp.present_days}</td>
                     <td className="pay-td pay-td--c pay-td--danger">{emp.absent_days}</td>
                     <td className="pay-td pay-td--c pay-td--danger">{emp.total_lop_days ?? emp.lop_days}</td>
                     <td className="pay-td pay-td--c">{emp.paid_days ?? emp.worked_days}</td>
-                    <td className="pay-td pay-td--r">₹ {Number(emp.per_day_salary || 0).toLocaleString()}</td>
-                    <td className="pay-td pay-td--r pay-td--amount-danger">₹ {Number(emp.lop_amount).toLocaleString()}</td>
+                    <td className="pay-td pay-td--r">₹ {fmt(emp.per_day_salary)}</td>
+                    <td className="pay-td pay-td--r pay-td--amount-danger">₹ {fmt(emp.lop_amount)}</td>
                     <td className="pay-td pay-td--c pay-td--muted">{emp.late_minutes}m</td>
                     <td className="pay-td pay-td--r pay-td--amount-danger">
-                      ₹ {Number(emp.late_penalty_amount || 0).toLocaleString()}
+                      ₹ {fmt(emp.late_penalty_amount)}
                     </td>
-                    <td className="pay-td pay-td--final pay-td--r">₹ {Number(emp.final_salary).toLocaleString()}</td>
+                    <td className="pay-td pay-td--r pay-td--amount-danger">
+                      ₹ {fmt(emp.pf_amount)}
+                    </td>
+                    <td className="pay-td pay-td--r pay-td--amount-danger">
+                      ₹ {fmt(emp.esi_amount)}
+                    </td>
+                    <td className="pay-td pay-td--final pay-td--r">₹ {fmt(emp.final_salary)}</td>
                     <td className="pay-td pay-td--action">
                       <button
                         className="pay-view-btn"
@@ -655,9 +723,15 @@ function MonthlyPayroll({ employees, branchId }) {
               </tbody>
               <tfoot>
                 <tr>
-                  <td className="pay-td pay-tfoot-label" colSpan={13}>Total Payable</td>
+                  <td className="pay-td pay-tfoot-label" colSpan={13}>Total</td>
+                  <td className="pay-td pay-td--r">
+                    ₹ {fmt(list.reduce((s, e) => s + Number(e.pf_amount || 0), 0))}
+                  </td>
+                  <td className="pay-td pay-td--r">
+                    ₹ {fmt(list.reduce((s, e) => s + Number(e.esi_amount || 0), 0))}
+                  </td>
                   <td className="pay-td pay-td--final pay-td--r">
-                    ₹ {list.reduce((s, e) => s + (e.final_salary || 0), 0).toLocaleString()}
+                    ₹ {fmt(list.reduce((s, e) => s + (e.final_salary || 0), 0))}
                   </td>
                   <td className="pay-td"></td>
                 </tr>
@@ -682,12 +756,14 @@ function MonthlyPayroll({ employees, branchId }) {
 /* ─────────────────────────────────────────────
    DAILY PAYROLL TAB
 ───────────────────────────────────────────── */
-function DailyPayroll({ branchId }) {
+function DailyPayroll({ employees, branchId }) {
   const [date] = useState(todayStr);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [meta, setMeta] = useState(null);
+  const [activeSlip, setActiveSlip] = useState(null);
+  const [activeEmployee, setActiveEmployee] = useState(null);
 
   const fetchDaily = async (d, branch) => {
     setLoading(true);
@@ -698,14 +774,17 @@ function DailyPayroll({ branchId }) {
       );
       const result = await res.json();
       if (result.success) {
-        setData(result.data || []);
+        const rows = result.data || [];
+        setData(rows);
         setMeta({
           month: result.month,
           year: result.year,
           total: result.total_employees,
-          total_days: result.total_days,
-          sundays: result.sundays,
-          holidays: result.holidays,
+          from_date: result.from_date,
+          to_date: result.to_date,
+          total_days: rows[0]?.month_days ?? result.total_days,
+          sundays: rows[0]?.sundays ?? result.sundays,
+          holidays: rows[0]?.holidays ?? result.holidays,
         });
       } else {
         setError('Failed to fetch payroll data.');
@@ -726,6 +805,17 @@ function DailyPayroll({ branchId }) {
       setError(null);
     }
   }, [date, branchId]);
+
+  /* Daily slip is built from the row already loaded — no extra API call */
+  const handleViewSlip = (emp) => {
+    setActiveSlip({
+      ...emp,
+      _daily: true,
+      from_date: meta?.from_date,
+      to_date: meta?.to_date,
+    });
+    setActiveEmployee(employees.find(e => e.id === emp.user_id) || null);
+  };
 
   return (
     <div className="pay-content">
@@ -763,7 +853,11 @@ function DailyPayroll({ branchId }) {
                   <th className="pay-th pay-th--c">Paid Days</th>
                   <th className="pay-th pay-th--r">Per Day</th>
                   <th className="pay-th pay-th--c">Late</th>
+                  <th className="pay-th pay-th--r">Gross</th>
+                  <th className="pay-th pay-th--r">PF</th>
+                  <th className="pay-th pay-th--r">ESI</th>
                   <th className="pay-th pay-th--final pay-th--r">Net Pay</th>
+                  <th className="pay-th pay-th--action">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -772,27 +866,54 @@ function DailyPayroll({ branchId }) {
                     <td className="pay-td pay-td--num">{idx + 1}</td>
                     <td className="pay-td pay-td--bold">{emp.employee_name}</td>
                     <td className="pay-td pay-td--mono">{emp.employee_id?.toUpperCase()}</td>
-                    <td className="pay-td pay-td--r">₹ {Number(emp.base_salary).toLocaleString()}</td>
+                    <td className="pay-td pay-td--r">₹ {fmt(emp.base_salary)}</td>
                     <td className="pay-td pay-td--c">{emp.working_days}</td>
                     <td className="pay-td pay-td--c pay-td--success">{emp.present_days}</td>
                     <td className="pay-td pay-td--c">{emp.paid_days}</td>
-                    <td className="pay-td pay-td--r">₹ {Number(emp.per_day_salary).toLocaleString()}</td>
+                    <td className="pay-td pay-td--r">₹ {fmt(emp.per_day_salary)}</td>
                     <td className="pay-td pay-td--c pay-td--muted">{emp.late_minutes}m</td>
-                    <td className="pay-td pay-td--final pay-td--r">₹ {Number(emp.final_salary).toLocaleString()}</td>
+                    <td className="pay-td pay-td--r">₹ {fmt(emp.gross_salary)}</td>
+                    <td className="pay-td pay-td--r pay-td--amount-danger">₹ {fmt(emp.pf_amount)}</td>
+                    <td className="pay-td pay-td--r pay-td--amount-danger">₹ {fmt(emp.esi_amount)}</td>
+                    <td className="pay-td pay-td--final pay-td--r">₹ {fmt(emp.final_salary)}</td>
+                    <td className="pay-td pay-td--action">
+                      <button
+                        className="pay-view-btn"
+                        onClick={() => handleViewSlip(emp)}
+                      >
+                        View Slip
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr>
-                  <td className="pay-td pay-tfoot-label" colSpan={9}>Total Payable</td>
-                  <td className="pay-td pay-td--final pay-td--r">
-                    ₹ {data.reduce((s, e) => s + (e.final_salary || 0), 0).toLocaleString()}
+                  <td className="pay-td pay-tfoot-label" colSpan={10}>Total</td>
+                  <td className="pay-td pay-td--r">
+                    ₹ {fmt(data.reduce((s, e) => s + Number(e.pf_amount || 0), 0))}
                   </td>
+                  <td className="pay-td pay-td--r">
+                    ₹ {fmt(data.reduce((s, e) => s + Number(e.esi_amount || 0), 0))}
+                  </td>
+                  <td className="pay-td pay-td--final pay-td--r">
+                    ₹ {fmt(data.reduce((s, e) => s + (e.final_salary || 0), 0))}
+                  </td>
+                  <td className="pay-td"></td>
                 </tr>
               </tfoot>
             </table>
           </div>
         </>
+      )}
+
+      {activeSlip && (
+        <PayslipModal
+          slip={activeSlip}
+          employee={activeEmployee}
+          onClose={() => { setActiveSlip(null); setActiveEmployee(null); }}
+          logoSrc={logo}
+        />
       )}
     </div>
   );
@@ -805,20 +926,17 @@ export default function Payroll() {
   const [activeTab, setActiveTab] = useState('daily');
   const [employees, setEmployees] = useState([]);
 
-  // Company / Branch dropdown state — same pattern as EmpList
   const [companies, setCompanies] = useState([]);
   const [branches, setBranches] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState('');
   const [selectedBranch, setSelectedBranch] = useState('');
 
   /* ---------------- INITIAL LOAD: companies ---------------- */
-
   useEffect(() => {
     fetchCompanies();
   }, []);
 
-  /* ---------------- WHEN BRANCH CHANGES: reload employees for that branch ---------------- */
-
+  /* ---------------- WHEN BRANCH CHANGES: reload employees ---------------- */
   useEffect(() => {
     if (selectedBranch) {
       fetch(`${EMPLOYEE_LIST_BY_BRANCH}${selectedBranch}`)
@@ -831,7 +949,6 @@ export default function Payroll() {
   }, [selectedBranch]);
 
   /* ---------------- FETCH COMPANIES ---------------- */
-
   const fetchCompanies = async () => {
     try {
       const res = await fetch(COMPANY_API);
@@ -840,7 +957,6 @@ export default function Payroll() {
       if (json.success) {
         setCompanies(json.data);
 
-        // auto-select the first company, then load its branches
         if (json.data.length > 0) {
           const firstCompany = json.data[0].id;
           setSelectedCompany(firstCompany);
@@ -853,7 +969,6 @@ export default function Payroll() {
   };
 
   /* ---------------- FETCH BRANCHES FOR A COMPANY ---------------- */
-
   const fetchBranches = async (companyId, autoSelectFirst = false) => {
     try {
       const res = await fetch(`${BRANCH_API}${companyId}`);
@@ -873,8 +988,6 @@ export default function Payroll() {
     }
   };
 
-  /* ---------------- COMPANY CHANGE HANDLER ---------------- */
-
   const handleCompanyChange = (e) => {
     const companyId = e.target.value;
     setSelectedCompany(companyId);
@@ -882,8 +995,6 @@ export default function Payroll() {
     setBranches([]);
     fetchBranches(companyId, true);
   };
-
-  /* ---------------- BRANCH CHANGE HANDLER ---------------- */
 
   const handleBranchChange = (e) => {
     setSelectedBranch(e.target.value);
@@ -898,7 +1009,6 @@ export default function Payroll() {
         </div>
 
         <div className="pay-header-controls">
-          {/* COMPANY DROPDOWN */}
           <select
             className="pay-select"
             value={selectedCompany}
@@ -912,7 +1022,6 @@ export default function Payroll() {
             ))}
           </select>
 
-          {/* BRANCH DROPDOWN */}
           <select
             className="pay-select"
             value={selectedBranch}
@@ -944,7 +1053,7 @@ export default function Payroll() {
         </button>
       </div>
 
-      {activeTab === 'daily' && <DailyPayroll branchId={selectedBranch} />}
+      {activeTab === 'daily' && <DailyPayroll employees={employees} branchId={selectedBranch} />}
       {activeTab === 'monthly' && <MonthlyPayroll employees={employees} branchId={selectedBranch} />}
     </div>
   );

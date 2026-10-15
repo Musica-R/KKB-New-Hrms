@@ -314,7 +314,8 @@ export default function EmpList() {
       empid: emp.empid || "",
       email: emp.email || "",
       mobile: emp.mobile || "",
-      position: emp.position || "",
+      // API returns position_name (and position_id); fall back to position if present
+      position: emp.position_name || emp.position || "",
       address: emp.address || "",
       dob: emp.dob || "",
       role_id: emp.role_id || "",
@@ -323,6 +324,8 @@ export default function EmpList() {
       start_time: emp.start_time ? emp.start_time.slice(0, 5) : "",
       end_time: emp.end_time ? emp.end_time.slice(0, 5) : "",
       salary: emp.salary ?? "",
+      PF: emp.PF ?? "",
+      FSI: emp.FSI ?? "",
     });
 
     // load branches for whichever company this employee belongs to
@@ -405,6 +408,22 @@ export default function EmpList() {
       return;
     }
 
+    // PF / FSI must be between 0 and 100 when provided (matches backend rule)
+    const isInvalidPercent = (v) => {
+      if (v === '' || v === null || v === undefined) return false;
+      const n = Number(v);
+      return Number.isNaN(n) || n < 0 || n > 100;
+    };
+
+    if (isInvalidPercent(editData.PF)) {
+      setSaveError('PF must be a number between 0 and 100');
+      return;
+    }
+    if (isInvalidPercent(editData.FSI)) {
+      setSaveError('FSI must be a number between 0 and 100');
+      return;
+    }
+
     // validate password fields only if the user opened the panel and is trying to change it
     if (showPasswordChange) {
       if (!newPassword || !confirmPassword) {
@@ -445,6 +464,12 @@ export default function EmpList() {
       if (editData.salary !== '' && editData.salary !== null && editData.salary !== undefined) {
         formData.append('salary', editData.salary);
       }
+
+      // PF & FSI are optional (nullable). Always sent, so clearing the field
+      // sends an empty string, which Laravel converts to null.
+      formData.append('PF', editData.PF ?? '');
+      formData.append('FSI', editData.FSI ?? '');
+
       if (editData.start_time) {
         formData.append('start_time', formatToHMS(editData.start_time));
       }
@@ -516,6 +541,14 @@ export default function EmpList() {
     });
   };
 
+  // PF / FSI come back from the API as strings like "10.00" or null
+  const formatPercent = (value) => {
+    if (value === null || value === undefined || value === '') return 'N/A';
+    const num = Number(value);
+    if (Number.isNaN(num)) return value;
+    return `${num}%`;
+  };
+
   const renderEmpCard = (emp) => (
     <div className="emp-card" key={emp.id}>
       <div className="emp-card-top">
@@ -530,7 +563,9 @@ export default function EmpList() {
       <div className="emp-card-body">
         <h3>{emp.name}</h3>
 
-        <span className="emp-position">{emp.position || 'N/A'}</span>
+        <span className="emp-position">
+          {emp.position_name || emp.position || 'N/A'}
+        </span>
 
         <p>
           <strong>Email:</strong> {emp.email}
@@ -546,6 +581,12 @@ export default function EmpList() {
         </p>
         <p>
           <strong>Salary:</strong> {formatSalary(emp.salary)}
+        </p>
+        <p>
+          <strong>PF:</strong> {formatPercent(emp.PF)}
+        </p>
+        <p>
+          <strong>FSI:</strong> {formatPercent(emp.FSI)}
         </p>
         <p>
           <strong>Work Time:</strong>{' '}
@@ -788,6 +829,34 @@ export default function EmpList() {
                     min="0"
                     step="0.01"
                     value={editData.salary}
+                    onChange={handleEditChange}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>PF (%)</label>
+                  <input
+                    type="number"
+                    name="PF"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    placeholder="Optional"
+                    value={editData.PF}
+                    onChange={handleEditChange}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>FSI (%)</label>
+                  <input
+                    type="number"
+                    name="FSI"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    placeholder="Optional"
+                    value={editData.FSI}
                     onChange={handleEditChange}
                   />
                 </div>

@@ -37,6 +37,8 @@ const initialFormData = {
   end_time: '',
   dob: '',
   salary: '',
+  PF: '',
+  FSI: '',
   profileimg: null,
 };
 
@@ -224,9 +226,9 @@ const RegistrationForm = () => {
 
     // includes designation and team_id (team's id) along with the other fields
     Object.keys(formData).forEach((key) => {
-      if (formData[key] !== null) {
-        submitData.append(key, formData[key]);
-      }
+      if (formData[key] === null) return;
+      if ((key === 'PF' || key === 'FSI') && formData[key] === '') return;
+      submitData.append(key, formData[key]);
     });
 
     try {
@@ -540,6 +542,36 @@ const RegistrationForm = () => {
               min="0"
               step="0.01"
               required
+            />
+          </div>
+
+          {/* PF */}
+          <div className="form-group">
+            <label>PF (%)</label>
+            <input
+              type="number"
+              name="PF"
+              value={formData.PF}
+              onChange={handleChange}
+              min="0"
+              max="100"
+              step="0.01"
+              placeholder="Optional"
+            />
+          </div>
+
+          {/* FSI */}
+          <div className="form-group">
+            <label>FSI (%)</label>
+            <input
+              type="number"
+              name="FSI"
+              value={formData.FSI}
+              onChange={handleChange}
+              min="0"
+              max="100"
+              step="0.01"
+              placeholder="Optional"
             />
           </div>
 
